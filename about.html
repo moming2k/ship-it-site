@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About — GitResolve</title>
+<style>
+  :root {
+    --bg: #0a0a0d;
+    --fg: #f5f5f4;
+    --muted: #96969c;
+    --border: #27272e;
+    --card: rgba(255, 255, 255, 0.03);
+    --glow-a: #6d5bff;
+    --glow-b: #ff6bcb;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f7f7f5;
+      --fg: #131314;
+      --muted: #68686f;
+      --border: #e6e6e2;
+      --card: rgba(255, 255, 255, 0.6);
+      --glow-a: #7c6bff;
+      --glow-b: #ff8fd6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    min-height: 100vh;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(560px circle at 24% 8%, color-mix(in srgb, var(--glow-a) 16%, transparent), transparent 60%),
+      radial-gradient(480px circle at 78% 60%, color-mix(in srgb, var(--glow-b) 12%, transparent), transparent 60%);
+    pointer-events: none;
+  }
+  .wrap { display: flex; flex-direction: column; align-items: center; width: 100%; }
+  .card {
+    position: relative;
+    max-width: 640px;
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: clamp(28px, 5vw, 48px);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.5);
+    margin: 24px 0;
+  }
+  a.back {
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 20px;
+  }
+  a.back:hover { color: var(--fg); }
+  h1 {
+    font-size: clamp(26px, 4vw, 34px);
+    line-height: 1.15;
+    margin: 0 0 20px;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  h2 {
+    font-size: 18px;
+    margin: 28px 0 10px;
+  }
+  p, li {
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  ul { padding-left: 20px; }
+  footer {
+    max-width: 640px;
+    width: 100%;
+    text-align: center;
+  }
+  footer a {
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+    margin: 0 10px;
+  }
+  footer a:hover { color: var(--fg); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+  <a class="back" href="/">← Back home</a>
+  <h1>About GitResolve</h1>
+  <p>GitResolve closes one specific gap: you have a project sitting in a GitHub or GitLab repository, and you want it live on the web without working through hosting settings, environment configuration, or account setup you don't need yet.</p>
+  <p>Paste a repository link, and we take you straight into Vercel's own project-import flow with the repository pre-filled. From there, everything happens under your own account — your project deploys to infrastructure you control, not ours.</p>
+  <h2>What GitResolve does</h2>
+  <ul>
+    <li>Reads the repository link you paste and checks that it points to a real GitHub or GitLab project</li>
+    <li>Builds a pre-filled link into Vercel's own deployment flow</li>
+    <li>Sends you there — deployment itself happens entirely on Vercel's infrastructure, under your account</li>
+  </ul>
+  <h2>What GitResolve doesn't do</h2>
+  <ul>
+    <li>We don't host your project ourselves</li>
+    <li>We don't store, read, or retain your repository's contents</li>
+    <li>We don't require an account, login, or payment on this site</li>
+  </ul>
+  <p>See <a href="/background.html">Background</a> for why this exists, or <a href="/terms.html">Terms</a> for the fine print.</p>
+</div>
+<footer>
+  <a href="/about.html">About</a>
+  <a href="/background.html">Background</a>
+  <a href="/terms.html">Terms</a>
+  <a href="/privacy.html">Privacy</a>
+</footer>
+</div>
+</body>
+</html>
