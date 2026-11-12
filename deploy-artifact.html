@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deploy an AI-generated file</title>
+<style>
+  :root {
+    --bg: #0a0a0d;
+    --fg: #f5f5f4;
+    --muted: #96969c;
+    --border: #27272e;
+    --card: rgba(255, 255, 255, 0.03);
+    --glow-a: #6d5bff;
+    --glow-b: #ff6bcb;
+    --accent-fg: #0a0a0d;
+    --focus-ring: rgba(109, 91, 255, 0.35);
+    --code-bg: rgba(255, 255, 255, 0.06);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f7f7f5;
+      --fg: #131314;
+      --muted: #68686f;
+      --border: #e6e6e2;
+      --card: rgba(255, 255, 255, 0.6);
+      --glow-a: #7c6bff;
+      --glow-b: #ff8fd6;
+      --accent-fg: #ffffff;
+      --focus-ring: rgba(124, 107, 255, 0.25);
+      --code-bg: rgba(0, 0, 0, 0.05);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(560px circle at 24% 18%, color-mix(in srgb, var(--glow-a) 22%, transparent), transparent 60%),
+      radial-gradient(480px circle at 78% 82%, color-mix(in srgb, var(--glow-b) 16%, transparent), transparent 60%);
+    pointer-events: none;
+  }
+  .card {
+    position: relative;
+    max-width: 560px;
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: clamp(28px, 5vw, 48px);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.5);
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 5px 12px;
+    margin-bottom: 20px;
+    letter-spacing: 0.02em;
+  }
+  .badge svg { width: 12px; height: 12px; }
+  h1 {
+    font-size: clamp(28px, 5vw, 38px);
+    line-height: 1.15;
+    margin: 0 0 12px;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  h1 span {
+    background: linear-gradient(90deg, var(--glow-a), var(--glow-b));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  p.lede {
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0 0 28px;
+  }
+  .file-drop {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .dropzone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 22px 16px;
+    border-radius: 12px;
+    border: 1px dashed var(--border);
+    background: color-mix(in srgb, var(--bg) 60%, transparent);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .dropzone:hover { border-color: color-mix(in srgb, var(--glow-a) 50%, var(--border)); }
+  .dropzone.drag-active {
+    border-color: var(--glow-a);
+    background: color-mix(in srgb, var(--glow-a) 8%, transparent);
+  }
+  .dropzone-text {
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .dropzone input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(90deg, var(--glow-a), var(--glow-b));
+    color: var(--accent-fg);
+    text-decoration: none;
+    font: inherit;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 15px 22px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--glow-a) 70%, transparent);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  }
+  .cta:hover:not(:disabled) { transform: translateY(-1px); }
+  .cta:active:not(:disabled) { transform: translateY(0); }
+  .cta:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .cta.secondary {
+    background: none;
+    color: var(--fg);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+  .error {
+    color: #ff6b6b;
+    font-size: 14px;
+    min-height: 20px;
+    margin: 2px 2px 0;
+  }
+  .status {
+    display: none;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 4px;
+  }
+  .status.visible { display: flex; }
+  .status-line {
+    color: var(--muted);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    border-top-color: var(--glow-a);
+    animation: spin 0.8s linear infinite;
+    flex: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fine {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  footer {
+    position: relative;
+    max-width: 560px;
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+  }
+  footer a {
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+    margin: 0 10px;
+  }
+  footer a:hover { color: var(--fg); }
+  .wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+  <span class="badge">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg>
+    For files, not repos yet
+  </span>
+  <h1>Got a file, not a <span>repo</span>?</h1>
+  <p class="lede">Upload the HTML file, zipped site, or image/video an AI tool gave you. We'll create a GitHub repo for it and hand you off to Vercel to make it live.</p>
+
+  <div class="file-drop" id="idle-view">
+    <label class="dropzone" id="dropzone" for="file-input">
+      <span class="dropzone-text" id="dropzone-text">Drag a file here, or click to choose one</span>
+      <input type="file" id="file-input" accept=".html,.htm,.zip,.png,.jpg,.jpeg,.gif,.webp,.svg,.avif,.mp4,.webm,.mov,.mp3,.wav,.ogg,text/html,application/zip,application/x-zip-compressed,image/*,video/*,audio/*">
+    </label>
+    <p class="error" id="file-error" role="alert" aria-live="polite"></p>
+    <button type="button" class="cta" id="start-btn" disabled>Connect GitHub &amp; deploy →</button>
+  </div>
+
+  <div class="status" id="status-view">
+    <div class="status-line" id="status-text"><span class="spinner" id="status-spinner"></span><span id="status-message">Waiting for you to approve access…</span></div>
+    <p class="fine">A GitHub window will open for you to approve access — we'll pick it up and close it automatically once you do.</p>
+    <button type="button" class="cta secondary hidden" id="retry-btn">Try again</button>
+  </div>
+
+  <p class="error" id="flow-error" role="alert" aria-live="polite"></p>
+  <p class="fine">Nothing is stored on our side — your GitHub token lives only in this tab's memory (never saved to disk), reused for further deploys until you reload or close the tab.</p>
+</div>
+<footer>
+  <a href="/index.html">Have a repo already?</a>
+  <a href="/about.html">About</a>
+  <a href="/terms.html">Terms</a>
+  <a href="/privacy.html">Privacy</a>
+</footer>
+</div>
+<script>
+  const RELAY_URL = 'https://ship-it-device-relay.moming2k.workers.dev';
+  const GITHUB_CLIENT_ID = 'Ov23li94kyzbRTuspQtT'; // public by design — must match relay/wrangler.toml
+
+  const MAX_SINGLE_FILE_BYTES = 5 * 1024 * 1024; // 5MB cap for a lone HTML/media file
+  const MAX_ZIP_BYTES = 20 * 1024 * 1024; // 20MB cap for a zipped site (multiple assets)
+  const WARN_FILE_BYTES = 1 * 1024 * 1024; // GitHub Contents API is happiest under ~1MB per file
+
+  function mediaKind(file) {
+    if (file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(file.name)) return 'image';
+    if (file.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name)) return 'video';
+    if (file.type.startsWith('audio/') || /\.(mp3|wav|ogg)$/i.test(file.name)) return 'audio';
+    return null;
+  }
+
+  function classifyFile(file) {
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed') return 'zip';
+    if (name.endsWith('.html') || name.endsWith('.htm') || file.type === 'text/html') return 'html';
+    if (mediaKind(file)) return 'media';
+    return null;
+  }
+
+  const fileInput = document.getElementById('file-input');
+  const dropzone = document.getElementById('dropzone');
+  const dropzoneText = document.getElementById('dropzone-text');
+  const fileError = document.getElementById('file-error');
+  const startBtn = document.getElementById('start-btn');
+  const idleView = document.getElementById('idle-view');
+  const statusView = document.getElementById('status-view');
+  const statusMessage = document.getElementById('status-message');
+  const statusSpinner = document.getElementById('status-spinner');
+  const retryBtn = document.getElementById('retry-btn');
+  const flowError = document.getElementById('flow-error');
+
+  // Vercel's own auto-redirect (redirect-url + auto-redirect=true) didn't
+  // reliably fire when the project-creation flow was opened via
+  // window.open — their own docs example only shows a plain <a href> link,
+  // i.e. a normal top-level navigation, not a popup. So this is a full-page
+  // redirect: vercel-callback.html is the actual destination page (with its
+  // own success + share UI), not a passthrough back to a live opener tab.
+  function vercelCallbackUrl() {
+    return new URL('vercel-callback.html', window.location.href).toString();
+  }
+
+  let selectedFile = null;
+  // In-memory only — never sessionStorage/localStorage, cleared on reload
+  // or tab close. Lets repeat deploys in the same tab skip re-approving in
+  // GitHub, until/unless GitHub itself rejects the token (401).
+  let cachedToken = null;
+
+  // OAuth popup state. A window we opened ourselves can be closed from here
+  // without a user gesture — the callback page also closes itself, but we
+  // keep a handle as a safety net and to detect the user closing it early.
+  let oauthPopup = null;
+  let oauthState = null;
+  let oauthResolved = false;
+
+  function callbackUrl() {
+    return new URL('oauth-callback.html', window.location.href).toString();
+  }
+
+  function randomState() {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function closeOauthPopup() {
+    if (oauthPopup && !oauthPopup.closed) {
+      try { oauthPopup.close(); } catch { /* best-effort; the callback page also closes itself */ }
+    }
+    oauthPopup = null;
+  }
+
+  function watchPopupClosed() {
+    const iv = setInterval(() => {
+      if (!oauthPopup) { clearInterval(iv); return; }
+      if (oauthPopup.closed) {
+        clearInterval(iv);
+        oauthPopup = null;
+        if (!oauthResolved) showError('That GitHub window was closed before finishing. Try again.');
+      }
+    }, 500);
+  }
+
+  window.addEventListener('message', async event => {
+    if (event.origin !== window.location.origin) return;
+    const data = event.data;
+    if (!data || data.source !== 'ship-it-oauth') return;
+
+    oauthResolved = true;
+    closeOauthPopup();
+
+    if (data.error) {
+      showError(data.error === 'access_denied'
+        ? 'GitHub access was declined, so we can’t create a repo. Try again if that was a mistake.'
+        : `GitHub login failed: ${data.error}`);
+      return;
+    }
+    if (!data.state || data.state !== oauthState) {
+      showError("That login response didn't match — try again.");
+      return;
+    }
+    oauthState = null;
+
+    setStatus('Creating your repo…');
+    let tokenRes;
+    try {
+      const r = await fetch(`${RELAY_URL}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: data.code, redirect_uri: callbackUrl() }),
+      });
+      tokenRes = await r.json();
+    } catch (err) {
+      showError(`Couldn't reach GitHub: ${err.message}`);
+      return;
+    }
+    if (!tokenRes.access_token) {
+      showError(`GitHub login failed: ${tokenRes.error_description || tokenRes.error || 'unknown error'}`);
+      return;
+    }
+
+    cachedToken = tokenRes.access_token;
+    const result = await deployWithToken(cachedToken);
+    if (result === 'token-invalid') {
+      cachedToken = null;
+      showError('GitHub rejected that session — click "Try again" to reconnect.');
+    }
+  });
+
+  function handleFile(file) {
+    fileError.textContent = '';
+    selectedFile = null;
+    startBtn.disabled = true;
+    dropzoneText.textContent = 'Drag a file here, or click to choose one';
+    if (!file) return;
+
+    const kind = classifyFile(file);
+    if (!kind) {
+      fileError.textContent = "That file type isn't supported yet — upload an .html file, a .zip of a site, or an image/video/audio file.";
+      return;
+    }
+    if (kind === 'zip' && typeof DecompressionStream === 'undefined') {
+      fileError.textContent = "This browser can't unzip files — try a recent Chrome, Edge, or Safari (16.4+).";
+      return;
+    }
+
+    const cap = kind === 'zip' ? MAX_ZIP_BYTES : MAX_SINGLE_FILE_BYTES;
+    if (file.size > cap) {
+      fileError.textContent = `That file is ${(file.size / 1024 / 1024).toFixed(1)}MB — this first version caps ${kind === 'zip' ? 'zip uploads' : 'uploads'} at ${cap / 1024 / 1024}MB.`;
+      return;
+    }
+    if (file.size > WARN_FILE_BYTES) {
+      fileError.textContent = `Heads up: this is a ${(file.size / 1024 / 1024).toFixed(1)}MB file — larger files are more likely to fail to commit. It'll still be attempted.`;
+    }
+    selectedFile = file;
+    dropzoneText.textContent = file.name;
+    startBtn.disabled = false;
+  }
+
+  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+  ['dragenter', 'dragover'].forEach(evt => {
+    dropzone.addEventListener(evt, e => {
+      e.preventDefault();
+      dropzone.classList.add('drag-active');
+    });
+  });
+  ['dragleave', 'dragend'].forEach(evt => {
+    dropzone.addEventListener(evt, e => {
+      e.preventDefault();
+      dropzone.classList.remove('drag-active');
+    });
+  });
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-active');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    // Keep the native input in sync so its own state (and any future
+    // reliance on fileInput.files) matches what was dropped.
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+    handleFile(file);
+  });
+
+  startBtn.addEventListener('click', () => startFlow());
+  retryBtn.addEventListener('click', () => resetToIdle());
+
+  function setStatus(text) {
+    statusSpinner.classList.remove('hidden');
+    statusMessage.textContent = text;
+  }
+
+  function showError(message) {
+    oauthResolved = true; // suppress watchPopupClosed's own error if it fires after this
+    closeOauthPopup();
+    flowError.textContent = message;
+    retryBtn.classList.remove('hidden');
+    statusView.classList.add('visible');
+    statusSpinner.classList.add('hidden');
+    statusMessage.textContent = '';
+  }
+
+  function resetToIdle() {
+    flowError.textContent = '';
+    statusView.classList.remove('visible');
+    idleView.classList.remove('hidden');
+    retryBtn.classList.add('hidden');
+  }
+
+  async function startFlow() {
+    if (!selectedFile) return;
+    if (RELAY_URL.includes('REPLACE_WITH')) {
+      fileError.textContent = 'This page is not set up yet — see relay/README.md to deploy the relay and set RELAY_URL.';
+      return;
+    }
+    flowError.textContent = '';
+    idleView.classList.add('hidden');
+    statusView.classList.add('visible');
+    retryBtn.classList.add('hidden');
+
+    if (cachedToken) {
+      setStatus('Creating your repo…');
+      const result = await deployWithToken(cachedToken);
+      if (result === 'token-invalid') {
+        cachedToken = null;
+        return startFlow(); // fall back to a fresh login
+      }
+      return;
+    }
+
+    setStatus('Waiting for you to approve access…');
+    oauthResolved = false;
+    oauthState = randomState();
+    const authUrl = 'https://github.com/login/oauth/authorize?' + new URLSearchParams({
+      client_id: GITHUB_CLIENT_ID,
+      scope: 'public_repo',
+      redirect_uri: callbackUrl(),
+      state: oauthState,
+    });
+    oauthPopup = window.open(authUrl, 'ship_it_github_auth');
+    if (!oauthPopup) {
+      showError('Your browser blocked the popup — allow popups for this site and try again.');
+      return;
+    }
+    watchPopupClosed();
+  }
+
+  function slugify(name) {
+    const base = name.replace(/\.[^/.]+$/, '');
+    const slug = base.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'artifact';
+    const suffix = Math.random().toString(36).slice(2, 6);
+    return `${slug}-${suffix}`;
+  }
+
+  function bytesToBase64(bytes) {
+    // btoa(String.fromCharCode(...bytes)) blows the call stack on large
+    // files (argument spread limit), so build the binary string in chunks.
+    const CHUNK = 0x8000;
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(binary);
+  }
+
+  function encodeGithubPath(path) {
+    // Contents API takes the path as URL segments — encode each segment,
+    // not the slashes between them.
+    return path.split('/').map(encodeURIComponent).join('/');
+  }
+
+  async function parseZip(arrayBuffer) {
+    const bytes = new Uint8Array(arrayBuffer);
+    const view = new DataView(arrayBuffer);
+
+    const EOCD_SIG = 0x06054b50;
+    let eocdOffset = -1;
+    const searchStart = Math.max(0, bytes.length - 65557);
+    for (let i = bytes.length - 22; i >= searchStart; i--) {
+      if (view.getUint32(i, true) === EOCD_SIG) { eocdOffset = i; break; }
+    }
+    if (eocdOffset === -1) throw new Error("That doesn't look like a valid zip file.");
+
+    const entryCount = view.getUint16(eocdOffset + 10, true);
+    let offset = view.getUint32(eocdOffset + 16, true);
+
+    const CD_SIG = 0x02014b50;
+    const LOCAL_SIG = 0x04034b50;
+    const results = [];
+
+    for (let i = 0; i < entryCount; i++) {
+      if (view.getUint32(offset, true) !== CD_SIG) throw new Error('Corrupt zip central directory.');
+      const compressionMethod = view.getUint16(offset + 10, true);
+      const compressedSize = view.getUint32(offset + 20, true);
+      const nameLen = view.getUint16(offset + 28, true);
+      const extraLen = view.getUint16(offset + 30, true);
+      const commentLen = view.getUint16(offset + 32, true);
+      const localHeaderOffset = view.getUint32(offset + 42, true);
+      const name = new TextDecoder('utf-8').decode(bytes.subarray(offset + 46, offset + 46 + nameLen));
+      offset += 46 + nameLen + extraLen + commentLen;
+
+      const isDir = name.endsWith('/');
+      const isJunk = /(^|\/)(__MACOSX|\.DS_Store)(\/|$)/.test(name);
+      if (isDir || isJunk) continue;
+
+      if (view.getUint32(localHeaderOffset, true) !== LOCAL_SIG) throw new Error(`Corrupt zip entry: ${name}`);
+      const localNameLen = view.getUint16(localHeaderOffset + 26, true);
+      const localExtraLen = view.getUint16(localHeaderOffset + 28, true);
+      const dataStart = localHeaderOffset + 30 + localNameLen + localExtraLen;
+      const compressedBytes = bytes.subarray(dataStart, dataStart + compressedSize);
+
+      let fileBytes;
+      if (compressionMethod === 0) {
+        fileBytes = compressedBytes;
+      } else if (compressionMethod === 8) {
+        const stream = new Blob([compressedBytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+        fileBytes = new Uint8Array(await new Response(stream).arrayBuffer());
+      } else {
+        throw new Error(`"${name}" uses an unsupported zip compression method — re-zip with standard/deflate compression.`);
+      }
+      results.push({ path: name, bytes: fileBytes });
+    }
+    return results;
+  }
+
+  function normalizeZipEntries(entries) {
+    // If every entry shares one leading folder (common when zipping a
+    // project folder), strip it so index.html ends up at the repo root.
+    const allNested = entries.every(e => e.path.includes('/'));
+    const firstSegments = entries.map(e => e.path.split('/')[0]);
+    const commonRoot = allNested && firstSegments.every(s => s === firstSegments[0]) ? firstSegments[0] + '/' : null;
+
+    const normalized = entries
+      .map(e => ({ path: commonRoot && e.path.startsWith(commonRoot) ? e.path.slice(commonRoot.length) : e.path, bytes: e.bytes }))
+      .filter(e => e.path.length > 0);
+
+    for (const e of normalized) {
+      if (e.path.split('/').includes('..')) throw new Error(`Unsafe path in zip: ${e.path}`);
+    }
+    if (!normalized.some(e => e.path.toLowerCase() === 'index.html')) {
+      throw new Error("Couldn't find an index.html in that zip — make sure your site has one at its root.");
+    }
+    return normalized;
+  }
+
+  function buildMediaIndexHtml(fileName, kind) {
+    const safeName = fileName.replace(/"/g, '&quot;');
+    const tag = kind === 'video'
+      ? `<video src="${safeName}" controls style="max-width:100%;max-height:100%;"></video>`
+      : kind === 'audio'
+      ? `<audio src="${safeName}" controls></audio>`
+      : `<img src="${safeName}" alt="" style="max-width:100%;max-height:100%;object-fit:contain;">`;
+    return `<!doctype html>\n<html>\n<head><meta charset="utf-8"><title>${safeName}</title>\n<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0d;}</style>\n</head>\n<body>${tag}</body>\n</html>\n`;
+  }
+
+  async function githubApi(path, token, options = {}) {
+    const res = await fetch(`https://api.github.com${path}`, {
+      ...options,
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github+json',
+        ...(options.headers || {}),
+      },
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  }
+
+  async function deployWithToken(token) {
+    const file = selectedFile;
+    const kind = classifyFile(file);
+
+    let filesToCommit; // [{ path, base64 }]
+    try {
+      if (kind === 'zip') {
+        setStatus('Unzipping your site…');
+        const entries = normalizeZipEntries(await parseZip(await file.arrayBuffer()));
+        filesToCommit = entries.map(e => ({ path: e.path, base64: bytesToBase64(e.bytes) }));
+      } else if (kind === 'media') {
+        const safeName = file.name.replace(/[^\w.-]+/g, '-');
+        const buffer = await file.arrayBuffer();
+        filesToCommit = [
+          { path: safeName, base64: bytesToBase64(new Uint8Array(buffer)) },
+          { path: 'index.html', base64: btoa(buildMediaIndexHtml(safeName, mediaKind(file))) },
+        ];
+      } else {
+        const buffer = await file.arrayBuffer();
+        filesToCommit = [{ path: 'index.html', base64: bytesToBase64(new Uint8Array(buffer)) }];
+      }
+    } catch (err) {
+      showError(err.message);
+      return;
+    }
+
+    let repo = null;
+    for (let attempt = 0; attempt < 3 && !repo; attempt++) {
+      const name = slugify(file.name);
+      const created = await githubApi('/user/repos', token, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description: 'Deployed via ship-it', auto_init: false }),
+      });
+      if (created.ok) {
+        repo = created.data;
+      } else if (created.status === 401) {
+        return 'token-invalid';
+      } else if (created.status !== 422) {
+        showError(`Couldn't create a GitHub repo: ${created.data.message || created.status}`);
+        return;
+      }
+      // 422 (name taken) falls through and retries with a fresh random suffix.
+    }
+    if (!repo) {
+      showError("Couldn't find a free repo name after a few tries. Try again.");
+      return;
+    }
+
+    for (let i = 0; i < filesToCommit.length; i++) {
+      const { path, base64 } = filesToCommit[i];
+      setStatus(filesToCommit.length > 1 ? `Uploading files… (${i + 1}/${filesToCommit.length})` : 'Uploading your file…');
+      const committed = await githubApi(`/repos/${repo.owner.login}/${repo.name}/contents/${encodeGithubPath(path)}`, token, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Add site file', content: base64 }),
+      });
+      if (!committed.ok) {
+        if (committed.status === 401) return 'token-invalid';
+        showError(`Repo was created but "${path}" failed to upload: ${committed.data.message || committed.status}. Your repo: ${repo.html_url}`);
+        return;
+      }
+    }
+
+    setStatus('Opening Vercel…');
+    const deployUrl = 'https://vercel.com/new/clone?' + new URLSearchParams({
+      'repository-url': repo.html_url,
+      'redirect-url': vercelCallbackUrl(),
+      // Ties the redirect to our registered Vercel Integration (public ID,
+      // not a secret) — per Vercel's docs, redirect-url only takes effect
+      // when developer-id is set and the Integration's Website field
+      // matches the redirect-url's origin.
+      'developer-id': 'oac_QHbjQbb7c1WQ6XgVU2Nq4zIk',
+    });
+    window.location.href = deployUrl;
+    return 'ok';
+  }
+</script>
+</body>
+</html>

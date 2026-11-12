@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connecting…</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0a0a0d;
+    color: #f5f5f4;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<p id="message">Connecting…</p>
+<script>
+  // GitHub redirects the popup here after the user approves/declines.
+  // Hand the result back to the tab that opened this popup and close.
+  const params = new URLSearchParams(window.location.search);
+  const payload = {
+    source: 'ship-it-oauth',
+    code: params.get('code'),
+    state: params.get('state'),
+    error: params.get('error'),
+  };
+
+  if (window.opener) {
+    window.opener.postMessage(payload, window.location.origin);
+    window.close();
+  } else {
+    // Opened directly (not as a popup) — nothing to hand back to.
+    document.getElementById('message').textContent = 'You can close this tab.';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your site is live!</title>
+<style>
+  :root {
+    --bg: #0a0a0d;
+    --fg: #f5f5f4;
+    --muted: #96969c;
+    --border: #27272e;
+    --card: rgba(255, 255, 255, 0.03);
+    --glow-a: #6d5bff;
+    --glow-b: #ff6bcb;
+    --accent-fg: #0a0a0d;
+    --code-bg: rgba(255, 255, 255, 0.06);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f7f7f5;
+      --fg: #131314;
+      --muted: #68686f;
+      --border: #e6e6e2;
+      --card: rgba(255, 255, 255, 0.6);
+      --glow-a: #7c6bff;
+      --glow-b: #ff8fd6;
+      --accent-fg: #ffffff;
+      --code-bg: rgba(0, 0, 0, 0.05);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    max-width: 560px;
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: clamp(28px, 5vw, 48px);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.5);
+  }
+  h1 {
+    font-size: clamp(26px, 5vw, 34px);
+    line-height: 1.15;
+    margin: 0 0 20px;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(90deg, var(--glow-a), var(--glow-b));
+    color: var(--accent-fg);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 15px 22px;
+    border-radius: 12px;
+    box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--glow-a) 70%, transparent);
+  }
+  .fine {
+    margin-top: 20px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .share-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .share-url {
+    flex: 1;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 14px;
+    background: var(--code-bg);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+  }
+  .copy-btn {
+    flex: none;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--fg);
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0 18px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .copy-btn:hover { border-color: var(--glow-a); }
+  .copy-btn.copied { color: var(--glow-a); border-color: var(--glow-a); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1 id="heading">🎉 Your site is live!</h1>
+  <a href="#" id="deployment-link" class="cta hidden" target="_blank" rel="noopener"></a>
+  <p class="fine">Know someone else stuck deploying an AI-built project? Share this tool:</p>
+  <div class="share-row">
+    <div class="share-url" id="share-url"></div>
+    <button type="button" class="copy-btn" id="share-copy-btn">Copy link</button>
+  </div>
+</div>
+<script>
+  // Vercel's own docs (vercel.com/docs/deployments/deploy-button/callback)
+  // document kebab-case params (deployment-url, project-name, ...), but a
+  // real observed redirect used camelCase on Vercel's own intermediate
+  // success page (deploymentUrl, projectName) — read both defensively
+  // rather than trust the docs alone.
+  const params = new URLSearchParams(window.location.search);
+  function param(...names) {
+    for (const name of names) {
+      const value = params.get(name);
+      if (value) return value;
+    }
+    return null;
+  }
+
+  const deploymentUrlRaw = param('deployment-url', 'deploymentUrl');
+  const deploymentLink = document.getElementById('deployment-link');
+  if (deploymentUrlRaw) {
+    const deploymentUrl = /^https?:\/\//.test(deploymentUrlRaw) ? deploymentUrlRaw : `https://${deploymentUrlRaw}`;
+    deploymentLink.href = deploymentUrl;
+    deploymentLink.textContent = deploymentUrl.replace(/^https?:\/\//, '');
+    deploymentLink.classList.remove('hidden');
+  } else {
+    document.getElementById('heading').textContent = 'Deployment complete!';
+  }
+
+  document.getElementById('share-url').textContent = window.location.origin + '/index.html';
+
+  document.getElementById('share-copy-btn').addEventListener('click', async function () {
+    const btn = this;
+    try {
+      await navigator.clipboard.writeText(window.location.origin + '/index.html');
+    } catch {
+      return; // the URL is still visible/selectable in the share-url box
+    }
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy link';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+
+  // Defensive: if this page is ever reached as a popup with a live opener
+  // (e.g. a future Vercel change makes the popup pattern work reliably),
+  // let the opener know too. Not required for this page to function.
+  if (window.opener) {
+    try {
+      window.opener.postMessage({
+        source: 'ship-it-vercel',
+        deploymentUrl: deploymentUrlRaw,
+        projectName: param('project-name', 'projectName'),
+        repositoryUrl: param('repository-url', 's', 'repositoryUrl'),
+      }, window.location.origin);
+    } catch { /* best-effort */ }
+  }
+</script>
+</body>
+</html>
